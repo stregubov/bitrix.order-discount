@@ -129,61 +129,57 @@ class OrderCountsDiscount extends \CSaleActionCtrlAction
     {
         $request = Context::getCurrent()->getRequest();
         global $USER;
-        if ($USER->IsAdmin()) {
 
-            // Если пользователь авторизован, то ищем его заказы по ID
-            if ($USER->IsAuthorized()) {
-                $userId = (int)$USER->getId();
+        // Если пользователь авторизован, то ищем его заказы по ID
+        if ($USER->IsAuthorized()) {
+            $userId = (int)$USER->getId();
 
-                if ($userId) {
-                    $orders = OrderTable::getList(['filter' => ['USER_ID' => $userId], 'select' => ['ID']]);
+            if ($userId) {
+                $orders = OrderTable::getList(['filter' => ['USER_ID' => $userId], 'select' => ['ID']]);
 
-                    $ordersCount = $orders->getSelectedRowsCount();
+                $ordersCount = $orders->getSelectedRowsCount();
 
-                    if ($ordersCount > $count) {
-                        return false;
-                    }
+                if ($ordersCount > $count) {
+                    return false;
                 }
             }
-
-            // Ищем заказы по номеру телефона
-            $prop = OrderPropsTable::getList([
-                'filter' => ['IS_PHONE' => 'Y', '=PERSON_TYPE_ID' => 3],
-                'cache' => ['ttl' => 3600]
-            ])->fetch();
-
-            if (!$prop) {
-                return false;
-            }
-
-            $phonePropertyId = $prop['ID'];
-
-            $phone = $request->getPost('ORDER_PROP_' . $phonePropertyId);
-
-            if (empty($phone)) {
-                $props = $request->getPost('order');
-                $phone = $props['ORDER_PROP_' . $phonePropertyId];
-            }
-
-            if (empty($phone)) {
-                return false;
-            }
-
-            $phone = str_replace(['+', '-', '(', ')'], '', $phone);
-
-            $propValues = OrderPropsValueTable::getList([
-                'filter' => [
-                    'ORDER_PROPS_ID' => $phonePropertyId,
-                    'VALUE' => $phone
-                ],
-                'select' => ['ORDER_ID']
-            ]);
-
-            $ordersCount = $propValues->getSelectedRowsCount();
-
-            return $ordersCount < $count;
         }
 
-        return false;
+        // Ищем заказы по номеру телефона
+        $prop = OrderPropsTable::getList([
+            'filter' => ['IS_PHONE' => 'Y', '=PERSON_TYPE_ID' => 3],
+            'cache' => ['ttl' => 3600]
+        ])->fetch();
+
+        if (!$prop) {
+            return false;
+        }
+
+        $phonePropertyId = $prop['ID'];
+
+        $phone = $request->getPost('ORDER_PROP_' . $phonePropertyId);
+
+        if (empty($phone)) {
+            $props = $request->getPost('order');
+            $phone = $props['ORDER_PROP_' . $phonePropertyId];
+        }
+
+        if (!$phone) {
+            return false;
+        }
+
+        $phone = str_replace(['+', '-', '(', ')'], '', $phone);
+
+        $propValues = OrderPropsValueTable::getList([
+            'filter' => [
+                'ORDER_PROPS_ID' => $phonePropertyId,
+                'VALUE' => $phone
+            ],
+            'select' => ['ORDER_ID']
+        ]);
+
+        $ordersCount = $propValues->getSelectedRowsCount();
+
+        return $ordersCount < $count;
     }
 }
